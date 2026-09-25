@@ -1,0 +1,6 @@
+id: tea-copilot
+name: AI 茶饮点单管家
+version: 1.0.0
+author: xfg-studio
+description: AI 茶饮点单管家，支持茶单（茉莉奶绿/烤黑糖波波/栀子青提/桂花乌龙/鸭屎香柠檬茶）、门店查询、点单（规格确认）、订单查询与运营统计。
+entrypoint: cn.xiaofuge.t.plugin.TeaPlugin

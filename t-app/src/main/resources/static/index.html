@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI 茶饮点单管家台 · Tea Shop</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family:"PingFang SC","Microsoft YaHei",sans-serif; background:#faf5ef; color:#2b2016; }
+  header { background:linear-gradient(135deg,#7c4a21,#c98a4b); color:#fff; padding:18px 28px; display:flex; justify-content:space-between; align-items:center; }
+  header h1 { font-size:20px; }
+  header .sub { font-size:12px; opacity:.85; margin-top:4px; }
+  header .badge { font-size:13px; background:rgba(255,255,255,.15); padding:6px 14px; border-radius:20px; }
+  main { display:grid; grid-template-columns:1fr 340px; gap:16px; padding:16px 20px; max-width:1240px; margin:0 auto; }
+  .col { display:flex; flex-direction:column; gap:16px; }
+  .card { background:#fff; border-radius:12px; padding:16px 18px; box-shadow:0 1px 4px rgba(124,74,33,.10); }
+  .card h2 { font-size:15px; margin-bottom:12px; color:#7c4a21; }
+  .stat { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; }
+  .stat div { background:#f4e7d8; border-radius:10px; padding:12px; }
+  .stat b { display:block; font-size:22px; color:#8f5a28; margin-top:4px; }
+  .stat span { font-size:12px; color:#a48a70; }
+  .tag { display:inline-block; padding:2px 8px; border-radius:10px; font-size:11px; }
+  .tag.g { background:#e3f4e9; color:#218a58; }
+  .tag.y { background:#fdf3e0; color:#c07f16; }
+  .tag.r { background:#fdeaea; color:#c74a44; }
+  .tag.b { background:#e7f0fb; color:#2e5fa3; }
+  .it { border:1px solid #ecdcc8; border-radius:10px; padding:10px 14px; margin-bottom:10px; }
+  .it .top { display:flex; justify-content:space-between; margin-bottom:4px; }
+  .it b { color:#7c4a21; font-size:13.5px; }
+  .it .meta { font-size:12.5px; color:#6b5642; line-height:1.7; }
+  .ai-panel { position:sticky; top:16px; display:flex; flex-direction:column; height:calc(100vh - 32px); background:#fff; border-radius:12px; overflow:hidden; box-shadow:0 1px 4px rgba(124,74,33,.10); }
+  .ai-head { background:linear-gradient(135deg,#7c4a21,#c98a4b); color:#fff; padding:14px 16px; }
+  .ai-head b { font-size:15px; }
+  .ai-head .sub { font-size:11px; opacity:.85; margin-top:3px; }
+  .ai-body { flex:1; overflow-y:auto; padding:14px; font-size:13.5px; line-height:1.75; }
+  .ai-body .msg { margin-bottom:12px; white-space:pre-wrap; word-break:break-word; }
+  .ai-body .msg.user { background:#f4e7d8; border-radius:10px 10px 2px 10px; padding:8px 12px; margin-left:24px; color:#2b2016; }
+  .chips { padding:8px 14px; display:flex; flex-wrap:wrap; gap:6px; border-top:1px solid #f0e2d0; }
+  .chip { font-size:12px; background:#f4e7d8; color:#7c4a21; border:none; border-radius:14px; padding:5px 10px; cursor:pointer; }
+  .chip:hover { background:#e8d0b0; }
+  .ai-input { display:flex; gap:8px; padding:10px 14px; border-top:1px solid #f0e2d0; }
+  .ai-input input { flex:1; border:1px solid #dcc6ab; border-radius:8px; padding:9px 12px; font-size:13px; outline:none; }
+  .ai-input input:focus { border-color:#c98a4b; }
+  .ai-input button { background:#c98a4b; color:#fff; border:none; border-radius:8px; padding:0 18px; font-size:13px; cursor:pointer; }
+  .ai-input button:disabled { background:#c7ab8a; }
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>🧋 AI 茶饮点单管家台</h1>
+    <div class="sub">茶单 · 门店 · 点单 · 统计 | 连锁茶饮云平台</div>
+  </div>
+  <div class="badge" id="topBadge">加载中…</div>
+</header>
+<main>
+  <div class="col">
+    <div class="card">
+      <h2>运营看板</h2>
+      <div class="stat" id="stats"></div>
+    </div>
+    <div class="card">
+      <h2>当季茶单</h2>
+      <div id="services"></div>
+    </div>
+    <div class="card">
+      <h2>最新订单</h2>
+      <div id="recent"></div>
+    </div>
+  </div>
+  <div class="ai-panel">
+    <div class="ai-head">
+      <b>🧋 AI 茶饮点单管家</b>
+      <div class="sub">tea-copilot · 茶单 / 门店 / 点单 / 统计</div>
+    </div>
+    <div class="ai-body" id="aiBody"></div>
+    <div class="chips">
+      <button class="chip" onclick="ask('有哪些茶饮？多少钱？')">今日茶单</button>
+      <button class="chip" onclick="ask('有哪些门店？哪家快？')">门店查询</button>
+      <button class="chip" onclick="ask('帮我点 2 杯烤黑糖波波，大杯五分糖去冰，天晖路店，17:30 取，水女士 13800998888，确认无误直接下单')">点单</button>
+      <button class="chip" onclick="ask('查一下订单 T9001 的状态')">订单查询</button>
+      <button class="chip" onclick="ask('今天运营情况怎么样？')">运营看板</button>
+    </div>
+    <div class="ai-input">
+      <input id="q" placeholder="例如：茉莉奶绿多少钱？；帮我点 2 杯栀子青提，大学城店" onkeydown="if(event.key==='Enter')send()">
+      <button id="sendBtn" onclick="send()">发送</button>
+    </div>
+  </div>
+</main>
+<script>
+const j = r => Promise.resolve(r).then(resp => resp.json()).then(d => d.data ?? d);
+async function load() {
+  try {
+    const st = await j(fetch('/api/stats'));
+    document.getElementById('topBadge').textContent = `订单 ${st.totalOrders} · 总杯数 ${st.totalCups} · 预计营收 ¥${st.expectedRevenue}`;
+    document.getElementById('stats').innerHTML = `
+      <div><span>总单量</span><b>${st.totalOrders}</b></div>
+      <div><span>制作中</span><b>${st.making}</b></div>
+      <div><span>待制作</span><b>${st.pending}</b></div>
+      <div><span>营收</span><b>¥${st.revenue}</b></div>`;
+    const ps = await j(fetch('/api/menu'));
+    document.getElementById('services').innerHTML = (ps.drinks || ps).map(p => `
+      <div class="it">
+        <div class="top"><b>${p.drink}</b><span class="tag g">¥${p.price}</span></div>
+        <div class="meta">${p.spec} · ${p.desc}</div>
+      </div>`).join('');
+    document.getElementById('recent').innerHTML = `
+      <div class="it">
+        <div class="top"><b>T9001 · 柏女士</b><span class="tag b">制作中</span></div>
+        <div class="meta">烤黑糖波波 ×2 · 大杯五分糖去冰 · 天晖路店 · ¥36</div>
+      </div>
+      <div class="it">
+        <div class="top"><b>T9002 · 水先生</b><span class="tag y">待制作</span></div>
+        <div class="meta">冷萃鸭屎香柠檬茶 ×1 · 大杯少冰 · 大学城店 · ¥21</div>
+      </div>
+      <div class="it">
+        <div class="top"><b>T9003 · 柏女士</b><span class="tag g">已完成</span></div>
+        <div class="meta">茉莉奶绿 ×3 · 中杯三分糖热 · 翡翠湾店 · ¥48</div>
+      </div>`;
+  } catch(e) { console.error(e); }
+}
+function ask(t) { const q=document.getElementById('q'); q.value=t; send(); }
+async function send() {
+  const inp = document.getElementById('q'), btn = document.getElementById('sendBtn');
+  const text = inp.value.trim(); if (!text || btn.disabled) return;
+  inp.value = ''; btn.disabled = true;
+  const body = document.getElementById('aiBody');
+  const u = document.createElement('div'); u.className = 'msg user'; u.textContent = text; body.appendChild(u);
+  const a = document.createElement('div'); a.className = 'msg'; a.textContent = '…'; body.appendChild(a);
+  try {
+    const resp = await fetch('/api/assistant/stream', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({message:text}) });
+    const reader = resp.body.getReader(), dec = new TextDecoder(); let buf = '', out = '';
+    for (;;) {
+      const {done, value} = await reader.read(); if (done) break;
+      buf += dec.decode(value, {stream:true});
+      const parts = buf.split('\n\n'); buf = parts.pop();
+      for (const p of parts) {
+        for (const line of p.split('\n')) {
+          if (!line.startsWith('data:')) continue;
+          const dstr = line.slice(5).trim(); if (!dstr || dstr === '[DONE]') continue;
+          try {
+            const d = JSON.parse(dstr);
+            const piece = d.content ?? d.delta ?? '';
+            if (typeof piece === 'string' && piece) { out += piece; a.textContent = out; body.scrollTop = body.scrollHeight; }
+          } catch(e) {}
+        }
+      }
+    }
+    if (!out) a.textContent = '（无返回内容）';
+  } catch(e) { a.textContent = 'AI 服务暂时不可用：' + e.message; }
+  btn.disabled = false; body.scrollTop = body.scrollHeight;
+}
+load();
+</script>
+</body>
+</html>
